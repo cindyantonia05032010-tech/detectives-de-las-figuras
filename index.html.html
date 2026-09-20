@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detectives de las Figuras</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #ffffff;
+    color: #111111;
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.5;
+  }
+  .container { max-width: 900px; margin: auto; padding: 25px; }
+  header {
+    border: 4px solid #111;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: #f2f2f2;
+  }
+  h1 { font-size: 38px; margin: 0 0 10px; }
+  h2 { font-size: 30px; }
+  .instruction {
+    border: 3px solid #111;
+    padding: 15px;
+    margin: 15px 0;
+    background: #fff;
+  }
+  button {
+    font-size: 22px;
+    padding: 12px 18px;
+    margin: 8px 4px;
+    border: 3px solid #111;
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  button:focus, button:hover { outline: 4px solid #111; }
+  .shape-box {
+    min-height: 210px;
+    border: 4px solid #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+    background: #fff;
+  }
+  .shape {
+    width: 130px;
+    height: 130px;
+    background: #111;
+  }
+  .circle { border-radius: 50%; }
+  .triangle {
+    width: 0;
+    height: 0;
+    background: transparent;
+    border-left: 75px solid transparent;
+    border-right: 75px solid transparent;
+    border-bottom: 140px solid #111;
+  }
+  .rectangle { width: 190px; height: 120px; }
+  .options { display: grid; gap: 10px; }
+  .feedback {
+    border: 4px solid #111;
+    padding: 15px;
+    margin-top: 15px;
+    min-height: 40px;
+    font-weight: bold;
+  }
+  .hidden { display: none; }
+  .progress { font-weight: bold; }
+  .small { font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔎 Detectives de las Figuras</h1>
+    <p>Actividad de Matemática para reconocer y clasificar figuras geométricas.</p>
+    <button onclick="speak('Bienvenida a Detectives de las Figuras. Primero escucha las instrucciones y luego comienza la actividad.')">🔊 Escuchar bienvenida</button>
+  </header>
+
+  <section class="instruction">
+    <h2>¿Cómo jugar?</h2>
+    <p>Observa la figura, escucha la pregunta si lo necesitas y selecciona la respuesta que creas correcta.</p>
+    <p>Puedes avanzar a tu propio ritmo. Al final podrás ver tu resultado.</p>
+    <button onclick="speak(document.getElementById('instructions').innerText)">🔊 Escuchar instrucciones</button>
+    <p id="instructions" class="hidden">Observa la figura que aparece en pantalla. Después selecciona su nombre. Si necesitas ayuda, presiona el botón escuchar pregunta.</p>
+  </section>
+
+  <section id="game">
+    <p class="progress" id="progress"></p>
+    <h2 id="questionTitle"></h2>
+    <button onclick="speak(current.question)">🔊 Escuchar pregunta</button>
+
+    <div class="shape-box" aria-label="Figura geométrica">
+      <div id="shape" class="shape"></div>
+    </div>
+
+    <div class="options" id="options"></div>
+    <div id="feedback" class="feedback" aria-live="polite"></div>
+    <button id="nextBtn" class="hidden" onclick="nextQuestion()">Siguiente</button>
+  </section>
+
+  <section id="result" class="hidden">
+    <h2>¡Actividad terminada!</h2>
+    <p id="score"></p>
+    <p>Lo importante es reconocer las figuras y aprender poco a poco.</p>
+    <button onclick="restart()">Volver a jugar</button>
+  </section>
+
+  <p class="small">Recurso diseñado con instrucciones breves, texto claro, botones grandes y apoyo auditivo. Puede utilizarse con computador o tablet y complementarse con herramientas de ampliación de pantalla.</p>
+</div>
+
+<script>
+const questions = [
+  {shape:'circle', name:'Círculo', question:'¿Qué figura geométrica estás observando?', options:['Círculo','Cuadrado','Triángulo'], answer:'Círculo'},
+  {shape:'square', name:'Cuadrado', question:'¿Qué figura tiene cuatro lados iguales?', options:['Círculo','Cuadrado','Rectángulo'], answer:'Cuadrado'},
+  {shape:'triangle', name:'Triángulo', question:'¿Qué figura tiene tres lados?', options:['Triángulo','Cuadrado','Círculo'], answer:'Triángulo'},
+  {shape:'rectangle', name:'Rectángulo', question:'¿Qué figura tiene cuatro lados y dos lados más largos que los otros?', options:['Rectángulo','Círculo','Triángulo'], answer:'Rectángulo'}
+];
+
+let index = 0;
+let score = 0;
+let current = questions[0];
+
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-CL';
+    utterance.rate = 0.9;
+    speechSynthesis.speak(utterance);
+  } else {
+    alert('Tu navegador no tiene disponible la lectura por voz.');
+  }
+}
+
+function render() {
+  current = questions[index];
+  document.getElementById('progress').innerText = `Desafío ${index+1} de ${questions.length}`;
+  document.getElementById('questionTitle').innerText = current.question;
+  const shape = document.getElementById('shape');
+  shape.className = 'shape ' + current.shape;
+  const options = document.getElementById('options');
+  options.innerHTML = '';
+  document.getElementById('feedback').innerText = '';
+  document.getElementById('nextBtn').classList.add('hidden');
+
+  current.options.forEach(option => {
+    const btn = document.createElement('button');
+    btn.innerText = option;
+    btn.onclick = () => answer(option);
+    options.appendChild(btn);
+  });
+}
+
+function answer(option) {
+  const feedback = document.getElementById('feedback');
+  const buttons = document.querySelectorAll('#options button');
+  buttons.forEach(b => b.disabled = true);
+
+  if (option === current.answer) {
+    score++;
+    feedback.innerText = '¡Muy bien! Tu respuesta es correcta.';
+    speak('Muy bien. Tu respuesta es correcta.');
+  } else {
+    feedback.innerText = `La respuesta correcta es ${current.answer}. Puedes seguir intentando.`;
+    speak(`La respuesta correcta es ${current.answer}. Puedes seguir intentando.`);
+  }
+
+  const next = document.getElementById('nextBtn');
+  next.classList.remove('hidden');
+  next.innerText = index === questions.length - 1 ? 'Ver resultado' : 'Siguiente desafío';
+}
+
+function nextQuestion() {
+  index++;
+  if (index < questions.length) render();
+  else {
+    document.getElementById('game').classList.add('hidden');
+    document.getElementById('result').classList.remove('hidden');
+    document.getElementById('score').innerText = `Tu resultado fue ${score} de ${questions.length} respuestas correctas.`;
+    speak(`Actividad terminada. Tu resultado fue ${score} de ${questions.length} respuestas correctas.`);
+  }
+}
+
+function restart() {
+  index = 0;
+  score = 0;
+  document.getElementById('result').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
